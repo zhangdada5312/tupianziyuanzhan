@@ -62,7 +62,7 @@ app.get('/api/resources', (req, res) => {
         ORDER BY r.created_at DESC LIMIT ? OFFSET ?
     `, [limit, offset], (err, rows) => {
         if (err) {
-            console.error('获���资源失败:', err);
+            console.error('获取资源失败:', err);
             res.status(500).json({ error: err.message });
             return;
         }
@@ -213,11 +213,12 @@ app.post('/api/resources', upload.single('image'), async (req, res) => {
 // 删除资源
 app.delete('/api/resources/:id', async (req, res) => {
     const { id } = req.params;
-    
+    const { type } = req.query;
+
     try {
         // 获取资源信息
         const resource = await new Promise((resolve, reject) => {
-            db.get(`SELECT * FROM resources WHERE id = ?`, id, (err, row) => {
+            db.get('SELECT * FROM resources WHERE id = ?', [id], (err, row) => {
                 if (err) reject(err);
                 else resolve(row);
             });
@@ -228,38 +229,51 @@ app.delete('/api/resources/:id', async (req, res) => {
             return;
         }
 
-        // 如果有图片，删除文件和hash记录
-        if (resource.image_path) {
-            const imagePath = path.join(uploadDir, resource.image_path);
-            try {
-                fs.unlinkSync(imagePath);
-            } catch (err) {
-                console.error('删除文件失败:', err);
-            }
-
-            // 删除hash记录
+        // 根据type参数决定删除内容
+        if (type === 'title') {
+            // 只删除标题
             await new Promise((resolve, reject) => {
-                db.run('DELETE FROM image_hashes WHERE image_path = ?', 
-                    [resource.image_path], 
-                    (err) => {
+                db.run('UPDATE resources SET title = NULL WHERE id = ?', [id], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            });
+        } else if (type === 'image') {
+            // 删除图片文件
+            if (resource.image_path) {
+                const imagePath = path.join(__dirname, '../sync/uploads', path.basename(resource.image_path));
+                try {
+                    if (fs.existsSync(imagePath)) {
+                        fs.unlinkSync(imagePath);
+                    }
+                } catch (err) {
+                    console.error('删除文件失败:', err);
+                }
+
+                // 删除图片记录
+                await new Promise((resolve, reject) => {
+                    db.run('UPDATE resources SET image_path = NULL, image_hash = NULL WHERE id = ?', [id], (err) => {
                         if (err) reject(err);
                         else resolve();
                     });
-            });
+                });
+
+                // 删除图片hash记录
+                if (resource.image_hash) {
+                    await new Promise((resolve, reject) => {
+                        db.run('DELETE FROM image_hashes WHERE hash = ?', [resource.image_hash], (err) => {
+                            if (err) reject(err);
+                            else resolve();
+                        });
+                    });
+                }
+            }
         }
 
-        // 删除资源记录
-        await new Promise((resolve, reject) => {
-            db.run('DELETE FROM resources WHERE id = ?', id, (err) => {
-                if (err) reject(err);
-                else resolve();
-            });
-        });
-
-        res.json({ message: '资源已删除' });
+        res.json({ message: '删除成功' });
     } catch (error) {
         console.error('删除资源失败:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: '删除资源失败' });
     }
 });
 

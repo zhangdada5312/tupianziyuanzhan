@@ -36,7 +36,37 @@ function initializeEventListeners() {
     });
     
     // 上传表单相关
-    uploadForm.addEventListener('submit', handleUpload);
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        const movieName = movieNameInput.value.trim();
+        const title = titleInput.value.trim();
+        const imageFile = imageInput.files[0];
+
+        formData.append('movie_name', movieName);
+        if (title) formData.append('title', title);
+        if (imageFile) formData.append('image', imageFile);
+
+        try {
+            const response = await fetch('/api/resources', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                // 清空表单
+                movieNameInput.value = '';
+                titleInput.value = '';
+                imageInput.value = '';
+                previewUpload.style.display = 'none';
+                document.querySelector('.upload-placeholder').style.display = 'block';
+                // 刷新资源列表
+                loadResources();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
     imageUploadArea.addEventListener('click', () => imageInput.click());
     imageInput.addEventListener('change', handleFileSelect);
     
@@ -144,6 +174,12 @@ async function copyImageToClipboard(imageUrl) {
                 [blob.type]: blob
             })
         ]);
+        // 可以添加一个简单的提示
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = '图片已复制';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
     } catch (err) {
         console.error('复制图片失败:', err);
     }
@@ -151,38 +187,40 @@ async function copyImageToClipboard(imageUrl) {
 
 // 显示资源
 function displayResources(resources) {
-    // 显示图片列表
-    const imagesHtml = resources
-        .filter(resource => resource.image_path)
-        .map(resource => `
-            <div class="image-item">
-                <img src="${resource.image_path}" alt="${resource.movie_name || ''}" onclick="copyImageToClipboard('${resource.image_path}')">
-                <img class="image-preview" src="${resource.image_path}" alt="预览图">
-                <div class="image-info">
-                    <span>${resource.movie_name || ''}</span>
-                    ${resource.title ? `<span>${resource.title}</span>` : ''}
-                </div>
-                <button class="delete-button" onclick="deleteResource(${resource.id}, 'image', event)">删除</button>
-            </div>
-        `).join('');
-    imageList.innerHTML = imagesHtml || '<p class="no-data">暂无图片</p>';
+    const imageList = document.getElementById('imageList');
+    const titleList = document.getElementById('titleList');
     
-    // 显示标题列表
-    const titlesHtml = resources
-        .filter(resource => resource.title) // 只显示有标题的资源
-        .map(resource => `
-            <div class="title-item">
+    imageList.innerHTML = '';
+    titleList.innerHTML = '';
+
+    resources.forEach(resource => {
+        if (resource.image_path) {
+            const imageItem = document.createElement('div');
+            imageItem.className = 'image-item';
+            imageItem.innerHTML = `
+                <img src="${resource.image_path}" alt="${resource.movie_name}" onclick="copyImageToClipboard('${resource.image_path}')">
+                <div class="image-title">${resource.movie_name}</div>
+                <button class="delete-button" onclick="deleteResource(${resource.id}, 'image')">删除</button>
+            `;
+            imageList.appendChild(imageItem);
+        }
+
+        if (resource.title) {
+            const titleItem = document.createElement('div');
+            titleItem.className = 'title-item';
+            titleItem.innerHTML = `
                 <div class="title-info">
-                    <h3>${resource.movie_name || ''}</h3>
+                    <h3>${resource.movie_name}</h3>
                     <h4>${resource.title}</h4>
                 </div>
                 <div class="title-actions">
                     <button onclick="copyText('${resource.title}')">复制标题</button>
-                    <button class="delete-button" onclick="deleteResource(${resource.id}, 'title', event)">删除</button>
+                    <button class="delete-button" onclick="deleteResource(${resource.id}, 'title')">删除</button>
                 </div>
-            </div>
-        `).join('');
-    titleList.innerHTML = titlesHtml || '<p class="no-data">暂无标题</p>';
+            `;
+            titleList.appendChild(titleItem);
+        }
+    });
 }
 
 // 复制文本
@@ -221,65 +259,6 @@ function handleSearch() {
     }
 }
 
-// 上传处理
-async function handleUpload(e) {
-    e.preventDefault();
-    
-    const movieName = movieNameInput.value.trim();
-    const title = titleInput.value.trim();
-    const image = imageInput.files[0];
-    
-    // 至少需要提供一项内容
-    if (!movieName && !title && !image) {
-        return;
-    }
-    
-    // 如果有图片且大于10MB，进行压缩
-    if (image && image.size > 10 * 1024 * 1024) {
-        try {
-            const compressedImage = await compressImage(image);
-            await uploadResource(movieName, title, compressedImage);
-        } catch (error) {
-            console.error('图片压缩失败:', error);
-        }
-    } else {
-        await uploadResource(movieName, title, image);
-    }
-}
-
-// 上传资源
-async function uploadResource(movieName, title, image = null) {
-    const formData = new FormData();
-    formData.append('movie_name', movieName);
-    if (title) {
-        formData.append('title', title);
-    }
-    if (image) {
-        formData.append('image', image);
-    }
-    
-    try {
-        const response = await fetch('/api/resources', {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (response.ok) {
-            alert('上传成功');
-            uploadForm.reset();
-            previewUpload.style.display = 'none';
-            document.querySelector('.upload-placeholder').style.display = 'block';
-            loadResources();
-        } else {
-            const error = await response.json();
-            throw new Error(error.error || '上传失败');
-        }
-    } catch (error) {
-        console.error('上传失败:', error);
-        alert(error.message || '上传失败，请重试');
-    }
-}
-
 // 分页处理
 function changePage(delta) {
     currentPage += delta;
@@ -294,25 +273,19 @@ function updatePagination(isLastPage) {
 }
 
 // 删除资源
-async function deleteResource(id, type, event) {
-    event.stopPropagation();
-    
-    if (!confirm('确定要删除这个资源吗？')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`/api/resources/${id}`, {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            loadResources(searchKeyword);
-        } else {
-            const error = await response.json();
-            throw new Error(error.error || '删除失败');
+async function deleteResource(id, type) {
+    if (confirm('确定要删除这个资源吗？')) {
+        try {
+            const response = await fetch(`/api/resources/${id}?type=${type}`, {
+                method: 'DELETE'
+            });
+
+            if (response.ok) {
+                // 刷新资源列表
+                loadResources();
+            }
+        } catch (error) {
+            console.error('Error:', error);
         }
-    } catch (error) {
-        console.error('删除失败:', error);
     }
 } 
