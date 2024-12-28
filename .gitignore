@@ -1,0 +1,21 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# 数据库文件
+backend/*.db
+backend/*.db-journal
+
+# 临时文件
+temp_restore/
+.DS_Store
+*.log
+
+# 备份文件
+backup/*.zip
+
+# 上传的图片单独管理
+uploads/*
+!uploads/.gitkeep 

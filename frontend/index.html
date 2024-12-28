@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>影视资源库</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>影视资源库</h1>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="搜索影视名称...">
+                <button id="searchBtn">搜索</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="sidebar">
+                <div class="upload-section">
+                    <h2>添加新资源</h2>
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="input-group">
+                            <input type="text" id="movieNameInput" placeholder="输入影视剧名称">
+                            <button type="button" class="clear-btn" onclick="clearInput('movieNameInput')">×</button>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" id="titleInput" placeholder="输入影视剧标题">
+                            <button type="button" class="clear-btn" onclick="clearInput('titleInput')">×</button>
+                        </div>
+                        <div class="image-upload-area" id="imageUploadArea">
+                            <div class="upload-placeholder">
+                                <p>点击选择图片，或将图片拖放到此处</p>
+                                <p>支持粘贴图片 (Ctrl+V)</p>
+                            </div>
+                            <img id="previewUpload" style="display: none;">
+                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                            <button type="button" class="clear-btn image-clear-btn" onclick="clearImage()" style="display: none;">×</button>
+                        </div>
+                        <button type="submit">上传</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="content">
+                <div class="view-controls">
+                    <button type="button" id="showImages" class="view-button active">图片列表</button>
+                    <button type="button" id="showTitles" class="view-button">标题列表</button>
+                </div>
+                <div id="imageSection" class="resource-section active">
+                    <div id="imageList" class="image-list"></div>
+                </div>
+                <div id="titleSection" class="resource-section">
+                    <div id="titleList" class="title-list"></div>
+                </div>
+                <div class="pagination">
+                    <button id="prevPage">上一页</button>
+                    <span id="currentPage">1</span>
+                    <button id="nextPage">下一页</button>
+                </div>
+            </div>
+        </main>
+
+        <div id="previewModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <img id="previewImage" src="" alt="预览图">
+            </div>
+        </div>
+    </div>
+
+    <script src="js/compress.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html> 
