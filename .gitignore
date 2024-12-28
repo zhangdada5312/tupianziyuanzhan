@@ -4,9 +4,8 @@ npm-debug.log
 yarn-debug.log
 yarn-error.log
 
-# 数据库文件
-backend/*.db
-backend/*.db-journal
+# 同步目录（由云盘管理）
+sync/
 
 # 临时文件
 temp_restore/

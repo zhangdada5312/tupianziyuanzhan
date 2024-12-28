@@ -6,7 +6,7 @@ const db = require('./database');
 const app = express();
 
 // 确保上传目录存在
-const uploadDir = path.join(__dirname, '../uploads');
+const uploadDir = path.join(__dirname, '../sync/uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -256,7 +256,7 @@ app.delete('/api/resources/:id', async (req, res) => {
             });
         });
 
-        res.json({ message: '资源已删除' });
+        res.json({ message: '��源已删除' });
     } catch (error) {
         console.error('删除资源失败:', error);
         res.status(500).json({ error: error.message });
