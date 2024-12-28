@@ -14,7 +14,7 @@ if (!fs.existsSync(uploadDir)) {
 // 中间件配置
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '../sync/uploads')));
 
 // 文件上传配置
 const storage = multer.diskStorage({
@@ -62,7 +62,7 @@ app.get('/api/resources', (req, res) => {
         ORDER BY r.created_at DESC LIMIT ? OFFSET ?
     `, [limit, offset], (err, rows) => {
         if (err) {
-            console.error('获取资源失败:', err);
+            console.error('获���资源失败:', err);
             res.status(500).json({ error: err.message });
             return;
         }
@@ -256,7 +256,7 @@ app.delete('/api/resources/:id', async (req, res) => {
             });
         });
 
-        res.json({ message: '��源已删除' });
+        res.json({ message: '资源已删除' });
     } catch (error) {
         console.error('删除资源失败:', error);
         res.status(500).json({ error: error.message });

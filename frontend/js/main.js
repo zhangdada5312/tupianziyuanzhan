@@ -158,24 +158,31 @@ function displayResources(resources) {
             <div class="image-item">
                 <img src="${resource.image_path}" alt="${resource.movie_name || ''}" onclick="copyImageToClipboard('${resource.image_path}')">
                 <img class="image-preview" src="${resource.image_path}" alt="预览图">
+                <div class="image-info">
+                    <span>${resource.movie_name || ''}</span>
+                    ${resource.title ? `<span>${resource.title}</span>` : ''}
+                </div>
                 <button class="delete-button" onclick="deleteResource(${resource.id}, 'image', event)">删除</button>
             </div>
         `).join('');
     imageList.innerHTML = imagesHtml || '<p class="no-data">暂无图片</p>';
     
     // 显示标题列表
-    titleList.innerHTML = resources.map(resource => `
-        <div class="title-item">
-            <div class="title-info">
-                <h3>${resource.movie_name || ''}</h3>
-                ${resource.title ? `<h4>${resource.title}</h4>` : ''}
+    const titlesHtml = resources
+        .filter(resource => resource.title) // 只显示有标题的资源
+        .map(resource => `
+            <div class="title-item">
+                <div class="title-info">
+                    <h3>${resource.movie_name || ''}</h3>
+                    <h4>${resource.title}</h4>
+                </div>
+                <div class="title-actions">
+                    <button onclick="copyText('${resource.title}')">复制标题</button>
+                    <button class="delete-button" onclick="deleteResource(${resource.id}, 'title', event)">删除</button>
+                </div>
             </div>
-            <div class="title-actions">
-                ${resource.title ? `<button onclick="copyText('${resource.title}')">复制标题</button>` : ''}
-                <button class="delete-button" onclick="deleteResource(${resource.id}, 'title', event)">删除</button>
-            </div>
-        </div>
-    `).join('');
+        `).join('');
+    titleList.innerHTML = titlesHtml || '<p class="no-data">暂无标题</p>';
 }
 
 // 复制文本
