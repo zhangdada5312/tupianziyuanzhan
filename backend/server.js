@@ -109,30 +109,34 @@ app.post('/api/resources', upload.single('image'), async (req, res) => {
         const { movie_name, title } = req.body;
         const image = req.file;
 
-        // 获取或创建影视剧记录
-        let movieId = null;
-        if (movie_name) {
-            const movie = await new Promise((resolve, reject) => {
-                db.get('SELECT id FROM movies WHERE name = ?', [movie_name], (err, row) => {
-                    if (err) reject(err);
-                    else resolve(row);
-                });
-            });
-
-            if (movie) {
-                movieId = movie.id;
-            } else {
-                const result = await new Promise((resolve, reject) => {
-                    db.run('INSERT INTO movies (name) VALUES (?)', [movie_name], function(err) {
-                        if (err) reject(err);
-                        else resolve(this.lastID);
-                    });
-                });
-                movieId = result;
-            }
+        // 验证必填字段
+        if (!movie_name) {
+            res.status(400).json({ error: '影视名字是必填项' });
+            return;
         }
 
-        // 检查标题是否重复
+        // 获取或创建影视剧记录
+        let movieId = null;
+        const movie = await new Promise((resolve, reject) => {
+            db.get('SELECT id FROM movies WHERE name = ?', [movie_name], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        if (movie) {
+            movieId = movie.id;
+        } else {
+            const result = await new Promise((resolve, reject) => {
+                db.run('INSERT INTO movies (name) VALUES (?)', [movie_name], function(err) {
+                    if (err) reject(err);
+                    else resolve(this.lastID);
+                });
+            });
+            movieId = result;
+        }
+
+        // 如果提供了标题，检查是否重复
         if (title) {
             const existingTitle = await new Promise((resolve, reject) => {
                 db.get('SELECT id FROM resources WHERE movie_id = ? AND title = ?', 
@@ -149,7 +153,7 @@ app.post('/api/resources', upload.single('image'), async (req, res) => {
             }
         }
 
-        // 如果有图片，检查图片是否重复
+        // 如果有图片，处理图片上传
         let imagePath = null;
         let imageHash = null;
         if (image) {

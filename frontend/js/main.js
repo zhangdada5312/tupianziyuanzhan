@@ -42,6 +42,7 @@ function initializeEventListeners() {
         const title = titleInput.value.trim();
         const files = imageInput.files;
 
+        // 只验证影视名字
         if (!movieName) {
             alert('请输入影视剧名称');
             return;
@@ -62,14 +63,15 @@ function initializeEventListeners() {
                     });
 
                     if (!response.ok) {
-                        throw new Error('上传失败');
+                        const data = await response.json();
+                        throw new Error(data.error || '上传失败');
                     }
                 }
-            } else if (title) {
-                // 如果没有图片但有标题，只上传标题
+            } else {
+                // 如果没有图片，只上传影视名字和标题（如果有）
                 const formData = new FormData();
                 formData.append('movie_name', movieName);
-                formData.append('title', title);
+                if (title) formData.append('title', title);
 
                 const response = await fetch('/api/resources', {
                     method: 'POST',
@@ -77,11 +79,9 @@ function initializeEventListeners() {
                 });
 
                 if (!response.ok) {
-                    throw new Error('上传失败');
+                    const data = await response.json();
+                    throw new Error(data.error || '上传失败');
                 }
-            } else {
-                alert('请输入标题或上传图片');
-                return;
             }
 
             // 清空表单
@@ -92,6 +92,7 @@ function initializeEventListeners() {
             // 刷新资源列表
             loadResources();
         } catch (error) {
+            alert(error.message);
             console.error('Error:', error);
         }
     });
