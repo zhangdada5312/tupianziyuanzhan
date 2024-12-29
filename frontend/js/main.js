@@ -156,6 +156,8 @@ function initializeEventListeners() {
         showTitlesBtn.classList.remove('active');
         imageSection.classList.add('active');
         titleSection.classList.remove('active');
+        currentPage = 1;
+        loadResources();
     });
     
     showTitlesBtn.addEventListener('click', () => {
@@ -163,6 +165,8 @@ function initializeEventListeners() {
         showImagesBtn.classList.remove('active');
         titleSection.classList.add('active');
         imageSection.classList.remove('active');
+        currentPage = 1;
+        loadResources();
     });
 }
 
@@ -360,9 +364,10 @@ async function copyToClipboard(text) {
 // 加载资源
 async function loadResources(keyword = '') {
     try {
+        const type = document.getElementById('titleSection').classList.contains('active') ? 'title' : 'image';
         const url = keyword
             ? `/api/search?keyword=${encodeURIComponent(keyword)}`
-            : `/api/resources?page=${currentPage}`;
+            : `/api/resources?page=${currentPage}&type=${type}`;
             
         const response = await fetch(url);
         const resources = await response.json();

@@ -56,17 +56,26 @@ const upload = multer({
 // 获取所有资源
 app.get('/api/resources', (req, res) => {
     const page = parseInt(req.query.page) || 1;
-    const limit = 12; // 每页显示12张图片
+    const type = req.query.type || 'image';
+    const limit = type === 'title' ? 15 : 12; // 标题列表每页15条，图片列表每页12条
     const offset = (page - 1) * limit;
     
-    db.all(`
+    let query = `
         SELECT r.*, m.name as movie_name 
         FROM resources r 
         LEFT JOIN movies m ON r.movie_id = m.id 
-        WHERE r.image_path IS NOT NULL
-        ORDER BY r.id DESC
-        LIMIT ? OFFSET ?
-    `, [limit, offset], (err, rows) => {
+        WHERE 1=1
+    `;
+    
+    if (type === 'image') {
+        query += ' AND r.image_path IS NOT NULL';
+    } else if (type === 'title') {
+        query += ' AND r.title IS NOT NULL';
+    }
+    
+    query += ' ORDER BY r.id DESC LIMIT ? OFFSET ?';
+    
+    db.all(query, [limit, offset], (err, rows) => {
         if (err) {
             console.error('获取资源失败:', err);
             res.status(500).json({ error: err.message });
