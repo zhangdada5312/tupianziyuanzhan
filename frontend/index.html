@@ -32,10 +32,11 @@
                         <div class="image-upload-area" id="imageUploadArea">
                             <div class="upload-placeholder">
                                 <p>点击选择图片，或将图片拖放到此处</p>
-                                <p>支持粘贴图片 (Ctrl+V)</p>
+                                <p>支持粘贴图片 (Ctrl+V) 或批量选择</p>
                             </div>
                             <img id="previewUpload" style="display: none;">
-                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                            <input type="file" id="imageInput" accept="image/*" multiple style="display: none;">
+                            <div id="previewContainer" class="preview-container"></div>
                             <button type="button" class="clear-btn image-clear-btn" onclick="clearImage()" style="display: none;">×</button>
                         </div>
                         <button type="submit">上传</button>

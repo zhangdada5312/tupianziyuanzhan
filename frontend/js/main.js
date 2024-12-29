@@ -38,31 +38,59 @@ function initializeEventListeners() {
     // 上传表单相关
     uploadForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData();
         const movieName = movieNameInput.value.trim();
         const title = titleInput.value.trim();
-        const imageFile = imageInput.files[0];
+        const files = imageInput.files;
 
-        formData.append('movie_name', movieName);
-        if (title) formData.append('title', title);
-        if (imageFile) formData.append('image', imageFile);
+        if (!movieName) {
+            alert('请输入影视剧名称');
+            return;
+        }
 
         try {
-            const response = await fetch('/api/resources', {
-                method: 'POST',
-                body: formData
-            });
+            if (files && files.length > 0) {
+                // 如果有图片文件，上传图片
+                for (let i = 0; i < files.length; i++) {
+                    const formData = new FormData();
+                    formData.append('movie_name', movieName);
+                    if (title) formData.append('title', title);
+                    formData.append('image', files[i]);
 
-            if (response.ok) {
-                // 清空表单
-                movieNameInput.value = '';
-                titleInput.value = '';
-                imageInput.value = '';
-                previewUpload.style.display = 'none';
-                document.querySelector('.upload-placeholder').style.display = 'block';
-                // 刷新资源列表
-                loadResources();
+                    const response = await fetch('/api/resources', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('上传失败');
+                    }
+                }
+            } else if (title) {
+                // 如果没有图片但有标题，只上传标题
+                const formData = new FormData();
+                formData.append('movie_name', movieName);
+                formData.append('title', title);
+
+                const response = await fetch('/api/resources', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('上传失败');
+                }
+            } else {
+                alert('请输入标题或上传图片');
+                return;
             }
+
+            // 清空表单
+            movieNameInput.value = '';
+            titleInput.value = '';
+            clearImage();
+            
+            // 刷新资源列表
+            loadResources();
         } catch (error) {
             console.error('Error:', error);
         }
@@ -83,10 +111,9 @@ function initializeEventListeners() {
     imageUploadArea.addEventListener('drop', (e) => {
         e.preventDefault();
         imageUploadArea.classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            handleImageFile(file);
-        }
+        clearImage(); // 清除现有预览
+        const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
+        files.forEach(handleImageFile);
     });
     
     // 粘贴上传
@@ -129,7 +156,9 @@ function clearInput(inputId) {
 // 清空图片
 function clearImage() {
     imageInput.value = '';
-    previewUpload.style.display = 'none';
+    const previewContainer = document.getElementById('previewContainer');
+    previewContainer.innerHTML = '';
+    previewContainer.style.display = 'none';
     document.querySelector('.upload-placeholder').style.display = 'block';
     document.querySelector('.image-clear-btn').style.display = 'none';
 }
@@ -140,28 +169,60 @@ function handleImageFile(file) {
         return;
     }
     
-    // 显示预览
+    const previewContainer = document.getElementById('previewContainer');
     const reader = new FileReader();
+    
     reader.onload = (e) => {
-        previewUpload.src = e.target.result;
-        previewUpload.style.display = 'block';
+        const previewItem = document.createElement('div');
+        previewItem.className = 'preview-item';
+        previewItem.innerHTML = `
+            <img src="${e.target.result}" alt="预览图">
+            <button class="remove-preview" onclick="removePreview(this)">×</button>
+        `;
+        previewContainer.appendChild(previewItem);
+        
         document.querySelector('.upload-placeholder').style.display = 'none';
+        previewContainer.style.display = 'grid';
         document.querySelector('.image-clear-btn').style.display = 'block';
     };
     reader.readAsDataURL(file);
-    
-    // 保存到input
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
-    imageInput.files = dataTransfer.files;
 }
 
 // 处理文件选择
 function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-        handleImageFile(file);
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    // 清除现有预览
+    const previewContainer = document.getElementById('previewContainer');
+    previewContainer.innerHTML = '';
+    
+    Array.from(files).forEach(handleImageFile);
+}
+
+// 移除预览图片
+function removePreview(button) {
+    const previewItem = button.parentElement;
+    const previewContainer = previewItem.parentElement;
+    previewItem.remove();
+    
+    // 如果没有预览图片了，显示占位符
+    if (previewContainer.children.length === 0) {
+        document.querySelector('.upload-placeholder').style.display = 'block';
+        previewContainer.style.display = 'none';
+        document.querySelector('.image-clear-btn').style.display = 'none';
+        imageInput.value = '';
     }
+    
+    // 从 FileList 中移除对应的文件
+    const dt = new DataTransfer();
+    const files = imageInput.files;
+    for (let i = 0; i < files.length; i++) {
+        if (i !== Array.from(previewContainer.children).indexOf(previewItem)) {
+            dt.items.add(files[i]);
+        }
+    }
+    imageInput.files = dt.files;
 }
 
 // 复制图片到剪贴板
