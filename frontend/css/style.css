@@ -465,33 +465,40 @@ main {
 }
 
 /* 图片列表样式 */
-.image-list {
+#imageList {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 15px;
     padding: 15px;
 }
 
 .image-item {
     position: relative;
+    width: 100%;
+    aspect-ratio: 1;
     border-radius: 8px;
     overflow: hidden;
     cursor: pointer;
-    background-color: white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background-color: #f8f9fa;
 }
 
 .image-item img {
     width: 100%;
-    height: 150px;
+    height: 100%;
     object-fit: contain;
-    background-color: #f8f9fa;
-    border-radius: 8px;
     transition: transform 0.2s ease;
 }
 
-.image-item img:hover {
-    transform: scale(1.02);
+@media (min-width: 768px) {
+    #imageList {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1200px) {
+    #imageList {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 
 .image-title {

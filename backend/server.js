@@ -14,7 +14,11 @@ if (!fs.existsSync(uploadDir)) {
 // 中间件配置
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend')));
-app.use('/uploads', express.static(path.join(__dirname, '../sync/uploads')));
+app.use('/uploads', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+}, express.static(path.join(__dirname, '../sync/uploads')));
 
 // 文件上传配置
 const storage = multer.diskStorage({
@@ -32,12 +36,12 @@ const storage = multer.diskStorage({
 
 // 文件过滤器
 const fileFilter = (req, file, cb) => {
-    // 只允许上传图片
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-    } else {
+    // 检查文件类型
+    if (!file.mimetype.startsWith('image/')) {
         cb(new Error('只允许上传图片文件！'), false);
+        return;
     }
+    cb(null, true);
 };
 
 const upload = multer({
@@ -52,14 +56,16 @@ const upload = multer({
 // 获取所有资源
 app.get('/api/resources', (req, res) => {
     const page = parseInt(req.query.page) || 1;
-    const limit = 15;
+    const limit = 12; // 每页显示12张图片
     const offset = (page - 1) * limit;
     
     db.all(`
         SELECT r.*, m.name as movie_name 
         FROM resources r 
         LEFT JOIN movies m ON r.movie_id = m.id 
-        ORDER BY r.created_at DESC LIMIT ? OFFSET ?
+        WHERE r.image_path IS NOT NULL
+        ORDER BY r.id DESC
+        LIMIT ? OFFSET ?
     `, [limit, offset], (err, rows) => {
         if (err) {
             console.error('获取资源失败:', err);
@@ -283,15 +289,14 @@ app.delete('/api/resources/:id', async (req, res) => {
 
 // 错误处理中间件
 app.use((err, req, res, next) => {
-    console.error('服务器错误:', err);
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
-            res.status(400).json({ error: '文件大小不能超过10MB' });
+            res.status(400).json({ error: '图片大小不能超过10MB' });
         } else {
             res.status(400).json({ error: err.message });
         }
     } else {
-        res.status(500).json({ error: '服务器内部错误' });
+        next(err);
     }
 });
 
