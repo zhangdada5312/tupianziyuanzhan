@@ -165,9 +165,6 @@ function initializeEventListeners() {
                 if (!title) continue;
                 
                 const formData = new FormData();
-                if (movieNameInput.value.trim()) {
-                    formData.append('movie_name', movieNameInput.value.trim());
-                }
                 formData.append('title', title.toString().trim());
                 if (typeof viewCount === 'number') {
                     formData.append('view_count', viewCount);
@@ -404,8 +401,10 @@ async function loadResources(keyword = '') {
             ? `/api/search?keyword=${encodeURIComponent(keyword)}`
             : `/api/resources?page=${currentPage}&type=${type}`;
             
+        console.log('Fetching resources from:', url);
         const response = await fetch(url);
         const resources = await response.json();
+        console.log('Received resources:', resources);
         
         // 如果当前页没有数据且不是第一页，则回到上一页
         if (resources.length === 0 && currentPage > 1) {
@@ -426,50 +425,110 @@ async function loadResources(keyword = '') {
 
 // 显示资源
 function displayResources(resources) {
-    const type = document.getElementById('titleSection').classList.contains('active') ? 'title' : 'image';
-    
-    if (type === 'image') {
-        // 图片列表
-        const imageListHtml = resources
-            .filter(resource => resource.image_path)
-            .map(resource => `
-                <div class="image-item">
-                    <img src="${resource.image_path}" alt="${resource.movie_name}" onclick="showFullImage('${resource.image_path}')">
-                    <div class="image-info">
-                        <span class="movie-name" onclick="copyText('${resource.movie_name}')">${resource.movie_name}</span>
-                        ${resource.title ? `<span class="title" onclick="copyText('${resource.title}')">${resource.title}</span>` : ''}
-                    </div>
-                </div>
-            `).join('');
-        imageList.innerHTML = imageListHtml || '<div class="no-data">暂无图片数据</div>';
-        imageList.style.display = 'grid';
-        titleList.style.display = 'none';
-    } else {
-        // 标题列表
-        const titleListHtml = resources
-            .filter(resource => resource.title)
-            .map(resource => `
-                <div class="title-item">
-                    <div class="title-info">
-                        <span class="movie-name" onclick="copyText('${resource.movie_name}')">${resource.movie_name}</span>
-                        <span class="title" onclick="copyText('${resource.title}')">${resource.title}</span>
-                    </div>
-                    <div class="title-actions">
-                        <button onclick="copyText('${resource.movie_name}')">复制影视名</button>
-                        <button onclick="copyText('${resource.title}')">复制标题</button>
-                    </div>
-                </div>
-            `).join('');
-        titleList.innerHTML = titleListHtml || '<div class="no-data">暂无标题数据</div>';
-        titleList.style.display = 'block';
-        imageList.style.display = 'none';
+    const showingImages = imageSection.classList.contains('active');
+    const container = showingImages ? imageList : titleList;
+    container.innerHTML = '';
+
+    if (resources.length === 0) {
+        container.innerHTML = '<div class="no-data">暂无数据</div>';
+        return;
     }
 
-    // 更新分页显示
-    const paginationContainer = document.querySelector('.pagination');
-    const hasData = resources.length > 0;
-    paginationContainer.style.display = hasData ? 'flex' : 'none';
-    updatePagination(!hasData);
+    if (showingImages) {
+        resources.forEach(resource => {
+            if (!resource.image_path) {
+                console.log('Skipping resource without image:', resource);
+                return;
+            }
+            
+            const item = document.createElement('div');
+            item.className = 'image-item';
+            
+            // 处理图片路径
+            const fileName = resource.image_path.replace(/^.*[\\\/]/, '');
+            const imagePath = `/uploads/${encodeURIComponent(fileName)}`;
+            
+            // 提取影视剧名称（如果存在）
+            const movieNameMatch = resource.title ? resource.title.match(/《(.+?)》/) : null;
+            const movieName = movieNameMatch ? movieNameMatch[1] : '';
+            
+            console.log('Processing image:', {
+                original: resource.image_path,
+                fileName: fileName,
+                finalPath: imagePath,
+                movieName: movieName
+            });
+            
+            // 添加加载状态类
+            item.classList.add('loading');
+            
+            item.innerHTML = `
+                <div class="image-loading">加载中...</div>
+                <img src="${imagePath}" alt="图片" 
+                    onerror="console.error('Image load failed:', this.src); this.onerror=null; this.src='/placeholder.png'; this.parentElement.classList.remove('loading');" 
+                    onload="console.log('Image loaded successfully:', this.src); this.parentElement.classList.remove('loading');"
+                    style="width: 100%; height: 100%; object-fit: contain; cursor: pointer;"
+                    onclick="showPreview('${imagePath}')">
+                ${movieName ? `<div class="movie-title">《${movieName}》</div>` : ''}
+                <button class="delete-button" onclick="deleteResource(${resource.id}, 'image')">删除</button>
+            `;
+            container.appendChild(item);
+        });
+    } else {
+        resources.forEach(resource => {
+            if (!resource.title) return; // 跳过没有标题的记录
+            
+            const item = document.createElement('div');
+            item.className = 'title-item';
+            
+            // 提取电影名称（如果存在）
+            const movieNameMatch = resource.title.match(/《(.+?)》/);
+            const movieName = movieNameMatch ? movieNameMatch[1] : '';
+            
+            // 构建HTML
+            item.innerHTML = `
+                <div class="title-info">
+                    <div class="title-header">
+                        ${movieName ? `<span class="movie-name">《${movieName}》</span>` : ''}
+                        ${resource.view_count ? `<span class="view-count">${resource.view_count}次观看</span>` : ''}
+                    </div>
+                    <div class="title-content">
+                        ${resource.title}
+                    </div>
+                </div>
+                <div class="title-actions">
+                    <button onclick="copyText('${resource.title}')" class="copy-button">复制标题</button>
+                    ${movieName ? `<button onclick="copyText('${movieName}')" class="copy-button">复制片名</button>` : ''}
+                    <button class="delete-button" onclick="deleteResource(${resource.id}, 'title')">删除</button>
+                </div>
+            `;
+            container.appendChild(item);
+        });
+    }
+}
+
+// 删除资源
+async function deleteResource(id, type) {
+    if (!confirm('确定要删除这个资源吗？')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/resources/${id}?type=${type}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            await loadResources(); // 重新加载资源列表
+            showToast('删除成功');
+        } else {
+            const data = await response.json();
+            throw new Error(data.error || '删除失败');
+        }
+    } catch (error) {
+        console.error('删除失败:', error);
+        showToast(error.message);
+    }
 }
 
 // 显示全屏图片
@@ -627,4 +686,26 @@ async function readXlsxFile(file) {
         reader.onerror = reject;
         reader.readAsArrayBuffer(file);
     });
+}
+
+// 显示预览图片
+function showPreview(imageUrl) {
+    const modal = document.getElementById('previewModal');
+    const modalImg = document.getElementById('previewImage');
+    const closeBtn = document.querySelector('.close');
+    
+    modal.style.display = 'block';
+    modalImg.src = decodeURIComponent(imageUrl);
+    
+    // 点击关闭按钮关闭模态框
+    closeBtn.onclick = function() {
+        modal.style.display = 'none';
+    }
+    
+    // 点击模态框外部关闭模态框
+    modal.onclick = function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    }
 } 
