@@ -220,77 +220,86 @@ app.get('/api/search', (req, res) => {
 // 添加新资源
 app.post('/api/resources', upload.single('image'), async (req, res) => {
     try {
-        let { movie_name, title } = req.body;
-        const image = req.file;
-        let view_count = req.body.view_count || 0;
+        const { title, type } = req.body;
+        const file = req.file;
+        
+        if (type === 'title' && title) {
+            // 检查是否存在完全相同的标题
+            const [existingTitles] = await pool.query(
+                'SELECT id FROM resources WHERE type = ? AND title = ?',
+                ['title', title]
+            );
 
-        // 如果上传了图片，必须提供影视剧名字
-        if (image && !movie_name) {
-            // 删除上传的图片
-            fs.unlinkSync(image.path);
-            res.status(400).json({ error: '上传图片时必须提供影视剧名字' });
-            return;
-        }
+            // 如果存在相同标题，先删除它们
+            if (existingTitles.length > 0) {
+                await pool.query(
+                    'DELETE FROM resources WHERE type = ? AND title = ?',
+                    ['title', title]
+                );
+                console.log(`Deleted ${existingTitles.length} duplicate titles`);
+            }
 
-        // 如果有图片，检查是否重复
-        if (image) {
-            const { isDuplicate, hash, existingPath, movieName } = await isImageDuplicate(image.path);
-            if (isDuplicate) {
-                // 删除刚上传的重复图片
-                fs.unlinkSync(image.path);
-                // 返回已存在的图片信息
-                res.status(400).json({ 
-                    error: '图片已存在',
-                    existingImage: `/uploads/${path.basename(existingPath)}`,
-                    movieName: movieName
-                });
+            // 提取影视剧名字
+            const movieName = extractMovieName(title);
+            
+            // 插入新标题
+            const [result] = await pool.query(
+                'INSERT INTO resources (title, type, movie_name) VALUES (?, ?, ?)',
+                [title, type, movieName]
+            );
+            
+            res.json({ id: result.insertId, message: '标题添加成功' });
+        } else if (type === 'image' && file) {
+            let { movie_name } = req.body;
+            const view_count = req.body.view_count || 0;
+
+            // 如果上传了图片，必须提供影视剧名字
+            if (!movie_name) {
+                // 删除上传的图片
+                fs.unlinkSync(file.path);
+                res.status(400).json({ error: '上传图片时必须提供影视剧名字' });
                 return;
             }
-            // 保存图片哈希值
-            image.hash = hash;
-        }
 
-        // 如果标题中包含《》，提取影视剧名字
-        if (title && !movie_name) {
-            const match = title.match(/《(.+?)》/);
-            if (match) {
-                movie_name = match[1];
+            // 如果有图片，检查是否重复
+            if (file) {
+                const { isDuplicate, hash, existingPath, movieName } = await isImageDuplicate(file.path);
+                if (isDuplicate) {
+                    // 删除刚上传的重复图片
+                    fs.unlinkSync(file.path);
+                    // 返回已存在的图片信息
+                    res.status(400).json({ error: '图片已存在', existingPath, movieName });
+                    return;
+                }
+                // 保存图片哈希值
+                file.hash = hash;
             }
-        }
 
-        // 保存资源
-        const resourceId = await new Promise((resolve, reject) => {
-            db.run(
-                `INSERT INTO resources (title, movie_name, image_path, image_hash, view_count) 
-                 VALUES (?, ?, ?, ?, ?)`,
+            // 插入新记录
+            const [result] = await pool.query(
+                'INSERT INTO resources (title, movie_name, image_path, image_hash, view_count) VALUES (?, ?, ?, ?, ?)',
                 [
                     title || null,
                     movie_name || null,
-                    image ? path.basename(image.path) : null,
-                    image ? image.hash : null,
+                    file ? path.basename(file.path) : null,
+                    file ? file.hash : null,
                     view_count
-                ],
-                function(err) {
-                    if (err) reject(err);
-                    else resolve(this.lastID);
-                }
+                ]
             );
-        });
 
-        res.json({
-            id: resourceId,
-            title: title || null,
-            movie_name: movie_name || null,
-            image_path: image ? `/uploads/${path.basename(image.path)}` : null,
-            view_count
-        });
-    } catch (error) {
-        console.error('上传处理失败:', error);
-        if (req.file) {
-            // 如果上传过程中出错，删除已上传的文件
-            fs.unlinkSync(req.file.path);
+            res.json({
+                id: result.insertId,
+                title: title || null,
+                movie_name: movie_name || null,
+                image_path: file ? `/uploads/${path.basename(file.path)}` : null,
+                view_count
+            });
+        } else {
+            res.status(400).json({ error: '无效的请求' });
         }
-        res.status(500).json({ error: error.message });
+    } catch (error) {
+        console.error('添加资源失败:', error);
+        res.status(500).json({ error: '添加资源失败' });
     }
 });
 
