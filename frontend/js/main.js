@@ -76,8 +76,20 @@ function initializeEventListeners() {
     });
     
     // 分页相关
-    prevPageBtn.addEventListener('click', () => changePage(-1));
-    nextPageBtn.addEventListener('click', () => changePage(1));
+    prevPageBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            loadResources();
+        }
+    });
+    
+    nextPageBtn.addEventListener('click', () => {
+        const hasNoData = document.querySelector('.no-data');
+        if (!hasNoData) {
+            currentPage++;
+            loadResources();
+        }
+    });
     
     // 视图切换
     showImagesBtn.addEventListener('click', () => {
@@ -310,58 +322,67 @@ async function loadResources(keyword = '') {
         const response = await fetch(url);
         const resources = await response.json();
         
+        // 如果当前页没有数据且不是第一页，则回到上一页
+        if (resources.length === 0 && currentPage > 1) {
+            currentPage--;
+            loadResources();
+            return;
+        }
+
         displayResources(resources);
         updatePagination(resources.length === 0);
     } catch (error) {
         console.error('加载资源失败:', error);
-        alert('加载资源失败，请稍后重试');
+        showToast('加载资源失败，请稍后重试');
     }
 }
 
 // 显示资源
 function displayResources(resources) {
-    // 图片列表
-    const imageListHtml = resources
-        .filter(resource => resource.image_path)
-        .map(resource => `
-            <div class="image-item">
-                <img src="${resource.image_path}" alt="${resource.movie_name}" onclick="showFullImage('${resource.image_path}')">
-                <div class="image-info">
-                    <span class="movie-name" onclick="copyText('${resource.movie_name}')">${resource.movie_name}</span>
-                    ${resource.title ? `<span class="title" onclick="copyText('${resource.title}')">${resource.title}</span>` : ''}
+    const type = document.getElementById('titleSection').classList.contains('active') ? 'title' : 'image';
+    
+    if (type === 'image') {
+        // 图片列表
+        const imageListHtml = resources
+            .filter(resource => resource.image_path)
+            .map(resource => `
+                <div class="image-item">
+                    <img src="${resource.image_path}" alt="${resource.movie_name}" onclick="showFullImage('${resource.image_path}')">
+                    <div class="image-info">
+                        <span class="movie-name" onclick="copyText('${resource.movie_name}')">${resource.movie_name}</span>
+                        ${resource.title ? `<span class="title" onclick="copyText('${resource.title}')">${resource.title}</span>` : ''}
+                    </div>
                 </div>
-            </div>
-        `).join('');
-    imageList.innerHTML = imageListHtml || '<div class="no-data">暂无图片数据</div>';
-
-    // 标题列表
-    const titleListHtml = resources
-        .filter(resource => resource.title)
-        .map(resource => `
-            <div class="title-item">
-                <div class="title-info">
-                    <span class="movie-name" onclick="copyText('${resource.movie_name}')">${resource.movie_name}</span>
-                    <span class="title" onclick="copyText('${resource.title}')">${resource.title}</span>
+            `).join('');
+        imageList.innerHTML = imageListHtml || '<div class="no-data">暂无图片数据</div>';
+        imageList.style.display = 'grid';
+        titleList.style.display = 'none';
+    } else {
+        // 标题列表
+        const titleListHtml = resources
+            .filter(resource => resource.title)
+            .map(resource => `
+                <div class="title-item">
+                    <div class="title-info">
+                        <span class="movie-name" onclick="copyText('${resource.movie_name}')">${resource.movie_name}</span>
+                        <span class="title" onclick="copyText('${resource.title}')">${resource.title}</span>
+                    </div>
+                    <div class="title-actions">
+                        <button onclick="copyText('${resource.movie_name}')">复制影视名</button>
+                        <button onclick="copyText('${resource.title}')">复制标题</button>
+                    </div>
                 </div>
-                <div class="title-actions">
-                    <button onclick="copyText('${resource.movie_name}')">复制影视名</button>
-                    <button onclick="copyText('${resource.title}')">复制标题</button>
-                </div>
-            </div>
-        `).join('');
-    titleList.innerHTML = titleListHtml || '<div class="no-data">暂无标题数据</div>';
+            `).join('');
+        titleList.innerHTML = titleListHtml || '<div class="no-data">暂无标题数据</div>';
+        titleList.style.display = 'block';
+        imageList.style.display = 'none';
+    }
 
     // 更新分页显示
     const paginationContainer = document.querySelector('.pagination');
-    if (resources.length === 0) {
-        paginationContainer.style.display = 'none';
-    } else {
-        paginationContainer.style.display = 'flex';
-        updatePagination(resources.length === 0);
-    }
-
-    // 初始化模态框事件
-    initializeModal();
+    const hasData = resources.length > 0;
+    paginationContainer.style.display = hasData ? 'flex' : 'none';
+    updatePagination(!hasData);
 }
 
 // 显示全屏图片

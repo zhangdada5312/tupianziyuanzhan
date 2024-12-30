@@ -73,20 +73,46 @@ app.get('/api/resources', (req, res) => {
         query += ' AND r.title IS NOT NULL';
     }
     
-    query += ' ORDER BY r.id DESC LIMIT ? OFFSET ?';
-    
-    db.all(query, [limit, offset], (err, rows) => {
+    // 先获取总数
+    db.get(`SELECT COUNT(*) as total FROM (${query})`, [], (err, countResult) => {
         if (err) {
-            console.error('获取资源失败:', err);
+            console.error('获取资源总数失败:', err);
             res.status(500).json({ error: err.message });
             return;
         }
-        // 转换图片路径为URL
-        rows = rows.map(row => ({
-            ...row,
-            image_path: row.image_path ? `/uploads/${path.basename(row.image_path)}` : null
-        }));
-        res.json(rows);
+
+        const total = countResult.total;
+        
+        // 如果没有数据，直接返回空数组
+        if (total === 0) {
+            res.json([]);
+            return;
+        }
+
+        // 添加分页限制
+        query += ' ORDER BY r.id DESC LIMIT ? OFFSET ?';
+        
+        // 获取当前页的数据
+        db.all(query, [limit, offset], (err, rows) => {
+            if (err) {
+                console.error('获取资源失败:', err);
+                res.status(500).json({ error: err.message });
+                return;
+            }
+
+            // 如果当前页没有数据，返回空数组
+            if (rows.length === 0) {
+                res.json([]);
+                return;
+            }
+
+            // 转换图片路径为URL
+            rows = rows.map(row => ({
+                ...row,
+                image_path: row.image_path ? `/uploads/${path.basename(row.image_path)}` : null
+            }));
+            res.json(rows);
+        });
     });
 });
 
