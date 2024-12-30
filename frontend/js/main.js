@@ -395,14 +395,21 @@ function removePreview(button) {
 // 加载资源
 async function loadResources(keyword = '') {
     try {
-        const type = document.getElementById('titleSection').classList.contains('active') ? 'title' : 'image';
+        const showingImages = imageSection.classList.contains('active');
+        const type = showingImages ? 'image' : 'title';
         pageSize = type === 'title' ? 15 : 12; // 标题列表每页15条，图片列表每页12条
+        
         const url = keyword
-            ? `/api/search?keyword=${encodeURIComponent(keyword)}`
+            ? `/api/search?keyword=${encodeURIComponent(keyword)}&type=${type}`
             : `/api/resources?page=${currentPage}&type=${type}`;
             
         console.log('Fetching resources from:', url);
         const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const resources = await response.json();
         console.log('Received resources:', resources);
         
@@ -413,7 +420,8 @@ async function loadResources(keyword = '') {
             return;
         }
 
-        displayResources(resources);
+        displayResources(resources, showingImages);
+        
         // 根据返回的数据长度判断是否为最后一页
         const isLastPage = resources.length < pageSize;
         updatePagination(isLastPage);
@@ -424,8 +432,7 @@ async function loadResources(keyword = '') {
 }
 
 // 显示资源
-function displayResources(resources) {
-    const showingImages = imageSection.classList.contains('active');
+function displayResources(resources, showingImages = true) {
     const container = showingImages ? imageList : titleList;
     container.innerHTML = '';
 
@@ -475,28 +482,33 @@ function displayResources(resources) {
         });
     } else {
         resources.forEach(resource => {
-            if (!resource.title) return; // 跳过没有标题的记录
+            if (!resource.title) return;
             
             const item = document.createElement('div');
             item.className = 'title-item';
             
-            // 构建HTML
+            const movieName = resource.movie_name ? `《${resource.movie_name}》` : '';
+            const viewCount = resource.view_count ? `${resource.view_count}次观看` : '';
+            
             item.innerHTML = `
                 <div class="title-info">
                     <div class="title-header">
-                        ${resource.movie_name ? `<span class="movie-name">《${resource.movie_name}》</span>` : ''}
-                        ${resource.view_count ? `<span class="view-count">${resource.view_count}次观看</span>` : ''}
-                    </div>
-                    <div class="title-content">
-                        ${resource.title}
+                        <div class="header-line">
+                            ${movieName ? `<span class="movie-name">${movieName}</span>` : ''}
+                            ${viewCount ? `<span class="view-count">${viewCount}</span>` : ''}
+                        </div>
+                        <div class="title-content">${resource.title}</div>
                     </div>
                 </div>
                 <div class="title-actions">
-                    <button onclick="copyText('${resource.title}')" class="copy-button">复制标题</button>
-                    ${resource.movie_name ? `<button onclick="copyText('${resource.movie_name}')" class="copy-button">复制片名</button>` : ''}
-                    <button class="delete-button" onclick="deleteResource(${resource.id}, 'title')">删除</button>
+                    <button onclick="deleteResource(${resource.id}, 'title')" class="delete-button">删除</button>
+                    <div class="copy-buttons">
+                        <button onclick="copyText('${resource.title.replace(/'/g, "\\'")}')" class="copy-button">复制标题</button>
+                        ${movieName ? `<button onclick="copyText('${resource.movie_name.replace(/'/g, "\\'")}')" class="copy-button">复制片名</button>` : ''}
+                    </div>
                 </div>
             `;
+            
             container.appendChild(item);
         });
     }
