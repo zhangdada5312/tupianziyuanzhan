@@ -409,8 +409,23 @@ function handleSearch() {
 // 复制文本到剪贴板
 async function copyText(text) {
     try {
-        await navigator.clipboard.writeText(text);
-        showToast('复制成功');
+        // 创建临时文本区域
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        
+        try {
+            // 尝试使用新的 API
+            await navigator.clipboard.writeText(text);
+            showToast('复制成功！');
+        } catch (err) {
+            // 如果新 API 失败，使用传统方法
+            document.execCommand('copy');
+            showToast('复制成功！');
+        }
+        
+        document.body.removeChild(textArea);
     } catch (err) {
         console.error('复制失败:', err);
         showToast('复制失败，请手动复制');
@@ -420,42 +435,25 @@ async function copyText(text) {
 // 复制图片到剪贴板
 async function copyImageToClipboard(imageUrl) {
     try {
-        // 创建一个临时的 img 元素
-        const img = new Image();
-        img.crossOrigin = 'anonymous';  // 允许跨域
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
         
-        // 等待图片加载
-        await new Promise((resolve, reject) => {
-            img.onload = resolve;
-            img.onerror = reject;
-            img.src = imageUrl;
-        });
-
-        // 创建 canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        // 在 canvas 上绘制图片
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        
-        // 将 canvas 转换为 blob
-        const blob = await new Promise(resolve => {
-            canvas.toBlob(resolve, 'image/png');
-        });
-        
-        // 复制到剪贴板
-        await navigator.clipboard.write([
-            new ClipboardItem({
-                'image/png': blob
-            })
-        ]);
-        
-        showToast('图片已复制到剪贴板');
+        try {
+            // 尝试使用新的 API
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    [blob.type]: blob
+                })
+            ]);
+            showToast('图片已复制到剪贴板！');
+        } catch (err) {
+            // 如果新 API 失败，打开图片在新标签页
+            window.open(imageUrl, '_blank');
+            showToast('请右键点击图片并选择"复制图片"');
+        }
     } catch (err) {
         console.error('复制图片失败:', err);
-        showToast('复制图片失败，请使用右键菜单复制图片');
+        showToast('复制失败，请手动复制图片');
     }
 }
 
