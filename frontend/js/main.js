@@ -330,7 +330,7 @@ function displayResources(resources) {
                     <span class="movie-name" onclick="copyText('${resource.movie_name}')">${resource.movie_name}</span>
                     ${resource.title ? `<span class="title" onclick="copyText('${resource.title}')">${resource.title}</span>` : ''}
                 </div>
-                <button class="copy-btn" onclick="event.stopPropagation(); copyImageToClipboard('${resource.image_path}')">复制图片</button>
+                <button class="copy-btn" onclick="event.stopPropagation(); showFullImage('${resource.image_path}')">打开大图</button>
             </div>
         `).join('');
     imageList.innerHTML = imageListHtml || '<div class="no-data">暂无图片数据</div>';
@@ -388,13 +388,17 @@ function initializeModal() {
 function updatePagination(isLastPage) {
     prevPageBtn.disabled = currentPage === 1;
     nextPageBtn.disabled = isLastPage;
+    currentPageSpan.textContent = currentPage;
 }
 
 // 分页处理
 function changePage(delta) {
-    currentPage += delta;
-    loadResources();
+    const newPage = currentPage + delta;
+    if (newPage < 1) return;
+    
+    currentPage = newPage;
     currentPageSpan.textContent = currentPage;
+    loadResources();
 }
 
 // 搜索处理
