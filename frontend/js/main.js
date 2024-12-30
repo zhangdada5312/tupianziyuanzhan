@@ -173,6 +173,9 @@ async function handleUpload(e) {
     }
 
     try {
+        let successCount = 0;
+        let duplicateCount = 0;
+
         if (files && files.length > 0) {
             // 如果有图片文件，上传图片
             for (let i = 0; i < files.length; i++) {
@@ -181,14 +184,28 @@ async function handleUpload(e) {
                 if (title) formData.append('title', title);
                 formData.append('image', files[i]);
 
-                const response = await fetch('/api/resources', {
-                    method: 'POST',
-                    body: formData
-                });
+                try {
+                    const response = await fetch('/api/resources', {
+                        method: 'POST',
+                        body: formData
+                    });
 
-                if (!response.ok) {
                     const data = await response.json();
-                    throw new Error(data.error || '上传失败');
+                    if (response.ok) {
+                        successCount++;
+                    } else if (data.error && data.error.includes('已存在')) {
+                        duplicateCount++;
+                        console.log('跳过重复项:', data.error);
+                    } else {
+                        throw new Error(data.error || '上传失败');
+                    }
+                } catch (err) {
+                    if (err.message.includes('已存在')) {
+                        duplicateCount++;
+                        console.log('跳过重复项:', err.message);
+                        continue;
+                    }
+                    throw err;
                 }
             }
         } else {
@@ -197,14 +214,28 @@ async function handleUpload(e) {
             formData.append('movie_name', movieName);
             if (title) formData.append('title', title);
 
-            const response = await fetch('/api/resources', {
-                method: 'POST',
-                body: formData
-            });
+            try {
+                const response = await fetch('/api/resources', {
+                    method: 'POST',
+                    body: formData
+                });
 
-            if (!response.ok) {
                 const data = await response.json();
-                throw new Error(data.error || '上传失败');
+                if (response.ok) {
+                    successCount++;
+                } else if (data.error && data.error.includes('已存在')) {
+                    duplicateCount++;
+                    console.log('跳过重复项:', data.error);
+                } else {
+                    throw new Error(data.error || '上传失败');
+                }
+            } catch (err) {
+                if (err.message.includes('已存在')) {
+                    duplicateCount++;
+                    console.log('跳过重复项:', err.message);
+                } else {
+                    throw err;
+                }
             }
         }
 
@@ -215,10 +246,18 @@ async function handleUpload(e) {
         
         // 刷新资源列表
         loadResources();
-        alert('上传成功！');
+
+        // 如果有成功上传的项目，显示简短的提示
+        if (successCount > 0) {
+            showToast(`成功上传 ${successCount} 个资源`);
+        }
+        // 如果有重复项，在控制台输出信息
+        if (duplicateCount > 0) {
+            console.log(`${duplicateCount} 个重复项已跳过`);
+        }
     } catch (error) {
-        alert(error.message);
         console.error('Error:', error);
+        showToast(error.message);
     }
 }
 
