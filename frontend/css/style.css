@@ -170,30 +170,29 @@ main {
 }
 
 .image-upload-area {
-    width: 100%;
-    height: 200px;
-    border: 2px dashed #ddd;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
     cursor: pointer;
+    margin-bottom: 20px;
+    min-height: 150px;
     position: relative;
-    overflow: hidden;
+    background-color: #f9f9f9;
     transition: all 0.3s ease;
 }
 
 .image-upload-area:hover {
-    border-color: #3498db;
+    border-color: #2196F3;
+    background-color: #f0f8ff;
 }
 
 .image-upload-area.dragover {
-    border-color: #2ecc71;
-    background-color: rgba(46, 204, 113, 0.1);
+    border-color: #2196F3;
+    background-color: #e3f2fd;
 }
 
 .upload-placeholder {
-    text-align: center;
     color: #666;
 }
 
@@ -345,37 +344,46 @@ main {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0,0,0,0.8);
+    background-color: rgba(0, 0, 0, 0.9);
     z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .modal-content {
     position: relative;
-    max-width: 800px;
-    margin: 40px auto;
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 8px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .close {
     position: absolute;
-    right: 20px;
-    top: 10px;
-    font-size: 24px;
+    top: 15px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
     cursor: pointer;
-    color: #666;
+    z-index: 1001;
 }
 
-.close:hover {
-    color: #000;
+.close:hover,
+.close:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
 }
 
 #previewImage {
-    max-width: 100%;
-    max-height: 70vh;
+    max-width: 90%;
+    max-height: 90vh;
+    object-fit: contain;
+    margin: auto;
     display: block;
-    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
 }
 
 .image-info {
@@ -478,8 +486,7 @@ main {
     aspect-ratio: 1;
     border-radius: 8px;
     overflow: hidden;
-    cursor: pointer;
-    background-color: #f8f9fa;
+    cursor: zoom-in;
 }
 
 .image-item img {
@@ -1214,4 +1221,165 @@ main {
 .delete-btn:hover {
     background-color: #dc3545;
     color: white;
+}
+
+.image-upload-area {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 20px;
+    min-height: 150px;
+    position: relative;
+    background-color: #f9f9f9;
+    transition: all 0.3s ease;
+}
+
+.image-upload-area:hover {
+    border-color: #2196F3;
+    background-color: #f0f8ff;
+}
+
+.image-upload-area.dragover {
+    border-color: #2196F3;
+    background-color: #e3f2fd;
+}
+
+.upload-placeholder {
+    color: #666;
+}
+
+.upload-placeholder p {
+    margin: 5px 0;
+}
+
+.preview-container {
+    display: none;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.preview-item {
+    position: relative;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.preview-item img {
+    width: 100%;
+    height: 100px;
+    object-fit: cover;
+}
+
+.remove-preview {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.remove-preview:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.image-clear-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 20px;
+    display: none;
+}
+
+.image-clear-btn:hover {
+    color: #ff4444;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    background-color: rgba(52, 152, 219, 0.9);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.image-item:hover .copy-btn {
+    opacity: 1;
+}
+
+.copy-btn:hover {
+    background-color: rgba(41, 128, 185, 1);
+}
+
+.movie-name, .title {
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.movie-name:hover, .title:hover {
+    color: #3498db;
+}
+
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    z-index: 1000;
+    animation: fadeInOut 2s ease-in-out forwards;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translate(-50%, 20px); }
+    15% { opacity: 1; transform: translate(-50%, 0); }
+    85% { opacity: 1; transform: translate(-50%, 0); }
+    100% { opacity: 0; transform: translate(-50%, -20px); }
+}
+
+.title-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.title-actions button {
+    padding: 4px 8px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.3s ease;
+}
+
+.title-actions button:hover {
+    background-color: #2980b9;
 } 
