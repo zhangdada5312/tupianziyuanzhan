@@ -21,12 +21,11 @@ db.serialize(() => {
     // 创建资源表
     db.run(`CREATE TABLE IF NOT EXISTS resources (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        movie_id INTEGER,
+        movie_name TEXT,
         title TEXT,
         image_path TEXT,
-        image_hash TEXT,
-        view_count INTEGER DEFAULT 0,
-        FOREIGN KEY (movie_id) REFERENCES movies(id)
+        image_hash TEXT UNIQUE,
+        view_count INTEGER DEFAULT 0
     )`);
 
     // 创建图片哈希表
@@ -35,15 +34,24 @@ db.serialize(() => {
         hash TEXT UNIQUE NOT NULL
     )`);
 
-    // 检查 view_count 列是否存在，如果不存在则添加
+    // 检查新字段是否存在，如果不存在则添加
     db.all("PRAGMA table_info(resources)", [], (err, rows) => {
         if (err) {
             console.error('检查表结构失败:', err);
             return;
         }
         
-        const hasViewCount = rows && Array.isArray(rows) && rows.some(row => row.name === 'view_count');
-        if (!hasViewCount) {
+        const columns = rows.map(row => row.name);
+        
+        if (!columns.includes('movie_name')) {
+            db.run("ALTER TABLE resources ADD COLUMN movie_name TEXT");
+        }
+        
+        if (!columns.includes('image_hash')) {
+            db.run("ALTER TABLE resources ADD COLUMN image_hash TEXT UNIQUE");
+        }
+        
+        if (!columns.includes('view_count')) {
             db.run("ALTER TABLE resources ADD COLUMN view_count INTEGER DEFAULT 0");
         }
     });
