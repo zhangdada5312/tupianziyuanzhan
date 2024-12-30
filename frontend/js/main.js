@@ -330,7 +330,6 @@ function displayResources(resources) {
                     <span class="movie-name" onclick="copyText('${resource.movie_name}')">${resource.movie_name}</span>
                     ${resource.title ? `<span class="title" onclick="copyText('${resource.title}')">${resource.title}</span>` : ''}
                 </div>
-                <button class="copy-btn" onclick="event.stopPropagation(); showFullImage('${resource.image_path}')">打开大图</button>
             </div>
         `).join('');
     imageList.innerHTML = imageListHtml || '<div class="no-data">暂无图片数据</div>';
@@ -351,6 +350,15 @@ function displayResources(resources) {
             </div>
         `).join('');
     titleList.innerHTML = titleListHtml || '<div class="no-data">暂无标题数据</div>';
+
+    // 更新分页显示
+    const paginationContainer = document.querySelector('.pagination');
+    if (resources.length === 0) {
+        paginationContainer.style.display = 'none';
+    } else {
+        paginationContainer.style.display = 'flex';
+        updatePagination(resources.length === 0);
+    }
 
     // 初始化模态框事件
     initializeModal();
