@@ -448,9 +448,8 @@ function displayResources(resources) {
             const fileName = resource.image_path.replace(/^.*[\\\/]/, '');
             const imagePath = `/uploads/${encodeURIComponent(fileName)}`;
             
-            // 提取影视剧名称（如果存在）
-            const movieNameMatch = resource.title ? resource.title.match(/《(.+?)》/) : null;
-            const movieName = movieNameMatch ? movieNameMatch[1] : '';
+            // 获取影视剧名字
+            const movieName = resource.movie_name || '未知影视剧';
             
             console.log('Processing image:', {
                 original: resource.image_path,
@@ -464,12 +463,12 @@ function displayResources(resources) {
             
             item.innerHTML = `
                 <div class="image-loading">加载中...</div>
-                <img src="${imagePath}" alt="图片" 
+                <img src="${imagePath}" alt="${movieName}" 
                     onerror="console.error('Image load failed:', this.src); this.onerror=null; this.src='/placeholder.png'; this.parentElement.classList.remove('loading');" 
                     onload="console.log('Image loaded successfully:', this.src); this.parentElement.classList.remove('loading');"
                     style="width: 100%; height: 100%; object-fit: contain; cursor: pointer;"
                     onclick="showPreview('${imagePath}')">
-                ${movieName ? `<div class="movie-title">《${movieName}》</div>` : ''}
+                <div class="movie-title">${movieName}</div>
                 <button class="delete-button" onclick="deleteResource(${resource.id}, 'image')">删除</button>
             `;
             container.appendChild(item);
@@ -481,15 +480,11 @@ function displayResources(resources) {
             const item = document.createElement('div');
             item.className = 'title-item';
             
-            // 提取电影名称（如果存在）
-            const movieNameMatch = resource.title.match(/《(.+?)》/);
-            const movieName = movieNameMatch ? movieNameMatch[1] : '';
-            
             // 构建HTML
             item.innerHTML = `
                 <div class="title-info">
                     <div class="title-header">
-                        ${movieName ? `<span class="movie-name">《${movieName}》</span>` : ''}
+                        ${resource.movie_name ? `<span class="movie-name">《${resource.movie_name}》</span>` : ''}
                         ${resource.view_count ? `<span class="view-count">${resource.view_count}次观看</span>` : ''}
                     </div>
                     <div class="title-content">
@@ -498,7 +493,7 @@ function displayResources(resources) {
                 </div>
                 <div class="title-actions">
                     <button onclick="copyText('${resource.title}')" class="copy-button">复制标题</button>
-                    ${movieName ? `<button onclick="copyText('${movieName}')" class="copy-button">复制片名</button>` : ''}
+                    ${resource.movie_name ? `<button onclick="copyText('${resource.movie_name}')" class="copy-button">复制片名</button>` : ''}
                     <button class="delete-button" onclick="deleteResource(${resource.id}, 'title')">删除</button>
                 </div>
             `;

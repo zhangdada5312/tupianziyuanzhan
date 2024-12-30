@@ -1502,6 +1502,13 @@ main {
     overflow: hidden;
     text-overflow: ellipsis;
     z-index: 5;
+    transition: all 0.3s ease;
+}
+
+.image-item:hover .movie-title {
+    white-space: normal;
+    word-break: break-all;
+    background: rgba(0, 0, 0, 0.8);
 }
 
 .image-item {
@@ -1512,6 +1519,13 @@ main {
     overflow: hidden;
     cursor: pointer;
     background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+}
+
+.image-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .image-item img {
@@ -1528,4 +1542,5 @@ main {
 .image-item:hover .movie-title {
     white-space: normal;
     word-break: break-all;
+    background: rgba(0, 0, 0, 0.8);
 } 
