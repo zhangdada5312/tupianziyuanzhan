@@ -1,6 +1,7 @@
 // 全局变量
 let currentPage = 1;
 let searchKeyword = '';
+let pageSize = 12; // 默认每页显示12条数据
 
 // DOM 元素
 const searchInput = document.getElementById('searchInput');
@@ -109,6 +110,95 @@ function initializeEventListeners() {
         currentPage = 1;
         loadResources();
     });
+    
+    // 标题输入框粘贴事件
+    titleInput.addEventListener('paste', async (e) => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text');
+        const titles = text.split('\n').filter(t => t.trim());
+        
+        if (titles.length > 1) {
+            // 批量处理标题
+            for (const title of titles) {
+                if (!title.trim()) continue;
+                
+                const formData = new FormData();
+                if (movieNameInput.value.trim()) {
+                    formData.append('movie_name', movieNameInput.value.trim());
+                }
+                formData.append('title', title.trim());
+                
+                try {
+                    const response = await fetch('/api/resources', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        const data = await response.json();
+                        console.error('上传失败:', data.error);
+                    }
+                } catch (err) {
+                    console.error('上传失败:', err);
+                }
+            }
+            
+            // 刷新资源列表
+            loadResources();
+            showToast(`成功处理 ${titles.length} 个标题`);
+            titleInput.value = '';
+        } else {
+            titleInput.value = text;
+        }
+    });
+    
+    // XLSX文件上传处理
+    document.getElementById('titleFileInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            const workbook = await readXlsxFile(file);
+            let successCount = 0;
+            
+            for (const [title, viewCount] of workbook) {
+                if (!title) continue;
+                
+                const formData = new FormData();
+                if (movieNameInput.value.trim()) {
+                    formData.append('movie_name', movieNameInput.value.trim());
+                }
+                formData.append('title', title.toString().trim());
+                if (typeof viewCount === 'number') {
+                    formData.append('view_count', viewCount);
+                }
+                
+                try {
+                    const response = await fetch('/api/resources', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        const data = await response.json();
+                        console.error('上传失败:', data.error);
+                    }
+                } catch (err) {
+                    console.error('上传失败:', err);
+                }
+            }
+            
+            // 刷新资源列表
+            loadResources();
+            showToast(`成功导入 ${successCount} 个标题`);
+            e.target.value = ''; // 清空文件输入
+        } catch (err) {
+            console.error('处理XLSX文件失败:', err);
+            showToast('处理XLSX文件失败，请检查文件格式');
+        }
+    });
 }
 
 // 处理文件选择
@@ -178,12 +268,6 @@ async function handleUpload(e) {
     const title = titleInput.value.trim();
     const files = imageInput.files;
 
-    // 只验证影视名字
-    if (!movieName) {
-        alert('请输入影视剧名称');
-        return;
-    }
-
     try {
         let successCount = 0;
         let duplicateCount = 0;
@@ -192,7 +276,7 @@ async function handleUpload(e) {
             // 如果有图片文件，上传图片
             for (let i = 0; i < files.length; i++) {
                 const formData = new FormData();
-                formData.append('movie_name', movieName);
+                if (movieName) formData.append('movie_name', movieName);
                 if (title) formData.append('title', title);
                 formData.append('image', files[i]);
 
@@ -220,11 +304,11 @@ async function handleUpload(e) {
                     throw err;
                 }
             }
-        } else {
-            // 如果没有图片，只上传影视名字和标题（如果有）
+        } else if (title) {
+            // 如果没有图片，只上传影视名字和标题
             const formData = new FormData();
-            formData.append('movie_name', movieName);
-            if (title) formData.append('title', title);
+            if (movieName) formData.append('movie_name', movieName);
+            formData.append('title', title);
 
             try {
                 const response = await fetch('/api/resources', {
@@ -315,6 +399,7 @@ function removePreview(button) {
 async function loadResources(keyword = '') {
     try {
         const type = document.getElementById('titleSection').classList.contains('active') ? 'title' : 'image';
+        pageSize = type === 'title' ? 15 : 12; // 标题列表每页15条，图片列表每页12条
         const url = keyword
             ? `/api/search?keyword=${encodeURIComponent(keyword)}`
             : `/api/resources?page=${currentPage}&type=${type}`;
@@ -330,7 +415,9 @@ async function loadResources(keyword = '') {
         }
 
         displayResources(resources);
-        updatePagination(resources.length === 0);
+        // 根据返回的数据长度判断是否为最后一页
+        const isLastPage = resources.length < pageSize;
+        updatePagination(isLastPage);
     } catch (error) {
         console.error('加载资源失败:', error);
         showToast('加载资源失败，请稍后重试');
@@ -389,8 +476,22 @@ function displayResources(resources) {
 function showFullImage(imageUrl) {
     const modal = document.getElementById('previewModal');
     const modalImg = document.getElementById('previewImage');
+    const closeBtn = document.querySelector('.close');
+    
     modal.style.display = 'block';
     modalImg.src = imageUrl;
+    
+    // 点击关闭按钮关闭模态框
+    closeBtn.onclick = function() {
+        modal.style.display = 'none';
+    }
+    
+    // 点击模态框外部关闭模态框
+    modal.onclick = function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    }
 }
 
 // 初始化模态框
@@ -418,6 +519,11 @@ function updatePagination(isLastPage) {
     prevPageBtn.disabled = currentPage === 1;
     nextPageBtn.disabled = isLastPage;
     currentPageSpan.textContent = currentPage;
+    
+    // 如果没有数据，隐藏分页控件
+    const paginationContainer = document.querySelector('.pagination');
+    const hasNoData = document.querySelector('.no-data');
+    paginationContainer.style.display = hasNoData ? 'none' : 'flex';
 }
 
 // 分页处理
@@ -501,4 +607,24 @@ function showToast(message) {
     setTimeout(() => {
         toast.remove();
     }, 2000);
+}
+
+// 读取XLSX文件
+async function readXlsxFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                resolve(rows.slice(1)); // 跳过表头行
+            } catch (err) {
+                reject(err);
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+    });
 } 

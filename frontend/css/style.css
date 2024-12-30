@@ -855,22 +855,51 @@ main {
     position: relative;
     display: flex;
     align-items: center;
+    gap: 10px;
     margin-bottom: 15px;
 }
 
-.input-group input {
+.input-group input[type="text"] {
+    flex: 1;
     width: 100%;
     padding: 10px 30px 10px 12px;
     border: 1px solid #ddd;
-    border-radius: 6px;
+    border-radius: var(--border-radius);
     font-size: 14px;
     transition: all 0.3s ease;
 }
 
-.input-group input:focus {
+.input-group input[type="text"]:focus {
     border-color: #3498db;
     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
     outline: none;
+}
+
+.upload-btn {
+    padding: 6px 10px;
+    background: #f8f9fa;
+    color: #666;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    margin-left: 4px;
+}
+
+.upload-btn:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.upload-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 2;
 }
 
 .image-clear-btn {

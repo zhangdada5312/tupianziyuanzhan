@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>影视资源库</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -22,12 +23,21 @@
                     <h2>添加新资源</h2>
                     <form id="uploadForm" enctype="multipart/form-data">
                         <div class="input-group">
-                            <input type="text" id="movieNameInput" placeholder="输入影视剧名称">
+                            <input type="text" id="movieNameInput" placeholder="输入影视剧名称（可选）">
                             <button type="button" class="clear-btn" onclick="clearInput('movieNameInput')">×</button>
                         </div>
                         <div class="input-group">
-                            <input type="text" id="titleInput" placeholder="输入影视剧标题">
+                            <input type="text" id="titleInput" placeholder="输入影视剧标题或粘贴多个标题">
                             <button type="button" class="clear-btn" onclick="clearInput('titleInput')">×</button>
+                            <input type="file" id="titleFileInput" accept=".xlsx" style="display: none;">
+                            <button type="button" class="upload-btn" onclick="document.getElementById('titleFileInput').click()">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                上传XLSX
+                            </button>
                         </div>
                         <div class="image-upload-area" id="imageUploadArea">
                             <div class="upload-placeholder">

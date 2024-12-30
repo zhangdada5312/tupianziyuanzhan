@@ -147,38 +147,45 @@ app.get('/api/search', (req, res) => {
 // 添加新资源
 app.post('/api/resources', upload.single('image'), async (req, res) => {
     try {
-        const { movie_name, title } = req.body;
+        let { movie_name, title } = req.body;
         const image = req.file;
+        let view_count = req.body.view_count || 0;
 
-        // 验证必填字段
-        if (!movie_name) {
-            res.status(400).json({ error: '影视名字是必填项' });
-            return;
+        // 如果标题中包含《》，提取影视剧名字
+        if (title && !movie_name) {
+            const match = title.match(/《(.+?)》/);
+            if (match) {
+                movie_name = match[1];
+                // 从标题中移除影视剧名字部分
+                title = title.replace(/《.+?》/, '').trim();
+            }
         }
 
-        // 获取或创建影视剧记录
+        // 获取或创建影视剧记录（如果有影视剧名字）
         let movieId = null;
-        const movie = await new Promise((resolve, reject) => {
-            db.get('SELECT id FROM movies WHERE name = ?', [movie_name], (err, row) => {
-                if (err) reject(err);
-                else resolve(row);
-            });
-        });
-
-        if (movie) {
-            movieId = movie.id;
-        } else {
-            const result = await new Promise((resolve, reject) => {
-                db.run('INSERT INTO movies (name) VALUES (?)', [movie_name], function(err) {
+        if (movie_name) {
+            const movie = await new Promise((resolve, reject) => {
+                db.get('SELECT id FROM movies WHERE name = ?', [movie_name], (err, row) => {
                     if (err) reject(err);
-                    else resolve(this.lastID);
+                    else resolve(row);
                 });
             });
-            movieId = result;
+
+            if (movie) {
+                movieId = movie.id;
+            } else {
+                const result = await new Promise((resolve, reject) => {
+                    db.run('INSERT INTO movies (name) VALUES (?)', [movie_name], function(err) {
+                        if (err) reject(err);
+                        else resolve(this.lastID);
+                    });
+                });
+                movieId = result;
+            }
         }
 
         // 如果提供了标题，检查是否重复
-        if (title) {
+        if (title && movieId) {
             const existingTitle = await new Promise((resolve, reject) => {
                 db.get('SELECT id FROM resources WHERE movie_id = ? AND title = ?', 
                     [movieId, title],
@@ -235,8 +242,8 @@ app.post('/api/resources', upload.single('image'), async (req, res) => {
 
         // 保存资源
         const resourceId = await new Promise((resolve, reject) => {
-            db.run(`INSERT INTO resources (movie_id, title, image_path, image_hash) VALUES (?, ?, ?, ?)`,
-                [movieId, title || null, imagePath, imageHash],
+            db.run(`INSERT INTO resources (movie_id, title, image_path, image_hash, view_count) VALUES (?, ?, ?, ?, ?)`,
+                [movieId, title || null, imagePath, imageHash, view_count],
                 function(err) {
                     if (err) reject(err);
                     else resolve(this.lastID);
@@ -245,9 +252,10 @@ app.post('/api/resources', upload.single('image'), async (req, res) => {
 
         res.json({
             id: resourceId,
-            movie_name,
+            movie_name: movie_name || null,
             title: title || null,
-            image_path: imagePath ? `/uploads/${imagePath}` : null
+            image_path: imagePath ? `/uploads/${imagePath}` : null,
+            view_count
         });
     } catch (error) {
         console.error('上传处理失败:', error);
